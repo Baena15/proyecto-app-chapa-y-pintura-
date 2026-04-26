@@ -9,7 +9,7 @@ App movil (PWA) para la gestion integral de un taller de chapa y pintura.
 | **Backend** | Django 5 + Django REST Framework |
 | **Frontend** | React 18 + Vite + Tailwind CSS |
 | **PWA** | Vite PWA Plugin (offline, manifest, service worker) |
-| **Database** | PostgreSQL 16 |
+| **Database** | PostgreSQL 16 (prod) / SQLite (dev rapido) |
 | **Cache** | Redis 7 |
 | **Auth** | JWT (djangorestframework-simplejwt) |
 | **Testing** | pytest (backend), Vitest (frontend) |
@@ -21,91 +21,171 @@ app-taller-chapa/
 ├── backend/          # Django API
 │   ├── config/       # Settings, URLs, WSGI
 │   ├── apps/         # Aplicaciones Django
-│   └── requirements.txt
+│   │   ├── core/     # Comandos utilidad (seed)
+│   │   ├── users/    # Auth y roles
+│   │   ├── customers/# Clientes y vehiculos
+│   │   ├── workorders/  # Ordenes de trabajo
+│   │   ├── estimates/   # Presupuestos
+│   │   ├── invoices/    # Facturas
+│   │   ├── photos/      # Fotos
+│   │   └── notifications/  # Notificaciones
+│   ├── requirements.txt
+│   └── manage.py
 ├── frontend/         # React PWA
-│   ├── src/          # Componentes y paginas
+│   ├── src/
+│   │   ├── api/      # Cliente API
+│   │   ├── context/  # AuthContext
+│   │   ├── components/ # UI reutilizable
+│   │   └── pages/    # Pantallas
 │   └── package.json
-├── scripts/          # Seed y test API
-├── docs/             # Documentacion
-├── Makefile          # Comandos de desarrollo
-└── docker-compose.yml
+├── Makefile
+├── docker-compose.yml
+└── docs/spec/        # Especificacion completa
 ```
 
-## 🛠️ Quick Start
+## 🛠️ Quick Start — Demo Local
 
-### 1. Requisitos
+### Requisitos
 - Python 3.12+
 - Node.js 20+
-- Docker Desktop (para PostgreSQL + Redis)
+- (Opcional) Docker Desktop — solo si quieres PostgreSQL/Redis
 
-### 2. Setup inicial
+### 1. Clonar / entrar al proyecto
 
 ```powershell
-# Clonar / entrar al proyecto
 cd app-taller-chapa
-
-# Instalar dependencias y configurar
-make setup
 ```
 
-### 3. Configurar variables de entorno
+### 2. Backend
 
 ```powershell
+# Crear virtualenv
+cd backend
+python -m venv venv
+
+# Activar (Windows PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Migraciones (usa SQLite por defecto en desarrollo)
+python manage.py migrate
+
+# Seed de datos de demo (usuarios, clientes, coches, OTs, presupuestos, facturas)
+python manage.py seed
+
+# Crear superusuario (opcional, el seed ya creo uno)
+# python manage.py createsuperuser
+
+# Levantar servidor
+python manage.py runserver
+```
+
+El backend estara en: http://127.0.0.1:8000
+
+**Credenciales de demo:**
+| Usuario | Contraseña | Rol |
+|---------|-----------|-----|
+| admin | admin123 | Administrador |
+| mecanico1 | pass123 | Mecanico |
+| recepcion | pass123 | Recepcionista |
+
+**Admin Django:** http://127.0.0.1:8000/admin/
+
+### 3. Frontend (en otra terminal)
+
+```powershell
+cd frontend
+
+# Instalar dependencias
+npm install
+
+# Levantar dev server
+npm run dev
+```
+
+El frontend estara en: http://localhost:5173
+
+### 4. Probar en tu movil (misma WiFi)
+
+1. Averigua la IP local de tu PC: `ipconfig` (ej: `192.168.1.35`)
+2. Abre en tu movil: `http://192.168.1.35:5173`
+3. Login con `admin` / `admin123`
+4. Agrega a pantalla de inicio para probar la PWA
+
+> ⚠️ Si usas SQLite (sin Docker), no necesitas `make db-up`. Si prefieres PostgreSQL, ejecuta `make db-up` antes y cambia `DATABASE_URL` en `.env`.
+
+---
+
+## 🐳 Con Docker (PostgreSQL + Redis)
+
+```powershell
+# 1. Copiar y editar variables de entorno
 cp .env.example .env
-# Editar .env con tus valores
+
+# 2. Levantar PostgreSQL y Redis
+docker-compose up -d
+
+# 3. En backend/.env (o variables de entorno):
+# DATABASE_URL=postgresql://talleruser:tallerpass@localhost:5433/tallerdb?sslmode=disable
+
+# 4. Migrar y seed
+python manage.py migrate
+python manage.py seed
+
+# 5. Levantar backend
+python manage.py runserver
 ```
 
-### 4. Levantar base de datos
-
-```powershell
-make db-up
-```
-
-### 5. Migraciones y seed
-
-```powershell
-make db-migrate
-make db-seed
-```
-
-### 6. Iniciar desarrollo
-
-```powershell
-# Backend + Frontend en paralelo
-make dev
-```
-
-- Backend: http://localhost:8000
-- Frontend: http://localhost:5173
+---
 
 ## 📱 Uso como PWA
 
-1. Abre http://localhost:5173 en tu movil (misma red WiFi)
-2. Chrome/Safari → "Agregar a pantalla de inicio"
-3. Listo, funciona como app nativa
+1. Abre la app en Chrome/Safari del movil
+2. Menu → "Agregar a pantalla de inicio"
+3. Listo, funciona como app nativa con icono propio
+
+---
 
 ## 🧪 Testing
 
 ```powershell
-# Tests backend
+# Backend
 make backend-test
 
-# Tests frontend
+# Frontend
 make frontend-test
-
-# Todos
-make test
 ```
 
-## 📋 Comandos utiles
+---
+
+## 📋 Comandos utiles (Makefile)
 
 ```powershell
-make lint        # flake8 + black + eslint
-make fmt         # Formatear codigo
-make build       # Build de produccion
-make clean       # Limpiar caches
+make dev              # Backend + Frontend (no implementado en paralelo en Windows)
+make backend-dev      # Django dev server
+make frontend-dev     # Vite dev server
+make test             # Tests backend + frontend
+make lint             # flake8 + black + eslint
+make fmt              # Formatear codigo
+make db-up            # PostgreSQL + Redis
+make db-seed          # Ejecuta python manage.py seed
 make security-check   # Checklist pre-deploy
 ```
+
+---
+
+## 🔐 Seguridad
+
+Revisa `SECURITY.md` antes de cada deploy. En produccion:
+- Cambia `SECRET_KEY`
+- `DEBUG = False`
+- Configura `ALLOWED_HOSTS`
+- Usa HTTPS
+- Configura email real para notificaciones
+
+---
 
 ## 🔄 Workflow SDD
 
@@ -118,7 +198,3 @@ Este proyecto usa el flujo de trabajo SDD de la plantilla madre:
 5. `/sdd-apply` — Implementar
 6. `/sdd-verify` — Verificar
 7. `/sdd-archive` — Archivar
-
-## 🔐 Seguridad
-
-Revisa `SECURITY.md` antes de cada deploy.
