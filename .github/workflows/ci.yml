@@ -1,0 +1,108 @@
+# CI/CD Pipeline — App Taller Chapa y Pintura
+# Tests + Lint + Deploy automatico
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Linter
+        run: |
+          cd backend
+          flake8 apps config --max-line-length=100 --exclude=migrations
+          black --check apps config --exclude migrations
+
+      - name: Run Tests
+        run: |
+          cd backend
+          pytest --cov=apps --cov-report=xml
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5433/testdb?sslmode=disable
+          SECRET_KEY: test-secret-key-32-characters-long
+          DEBUG: True
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Run Linter
+        run: cd frontend && npm run lint
+
+      - name: Run Tests
+        run: cd frontend && npm run test -- --run
+
+      - name: Build
+        run: cd frontend && npm run build
+
+  deploy:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Production
+        run: echo "🚀 Deploy step: configure your deploy command here"
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}

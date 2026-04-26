@@ -1,0 +1,55 @@
+# ─── Environment ────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Python / Django ────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+backend/env/
+backend/.env
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+backend/media/
+!backend/media/.gitkeep
+backend/staticfiles/
+
+# Testing / Coverage
+htmlcov/
+.coverage
+.pytest_cache/
+.tox/
+
+# ─── Node / React ───────────────────────────
+node_modules/
+frontend/dist/
+frontend/.cache/
+*.local
+
+# ─── IDE / Editor ───────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Docker ─────────────────────────────────
+# data/
+
+# ─── Engram (opcional) ──────────────────────
+# engram/

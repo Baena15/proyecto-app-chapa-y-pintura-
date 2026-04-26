@@ -1,0 +1,47 @@
+# Docker Compose — App Taller Chapa y Pintura
+# Servicios: PostgreSQL 16, Redis 7
+# Uso: make db-up
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: taller-chapa-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-talleruser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tallerpass}
+      POSTGRES_DB: ${DB_NAME:-tallerdb}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-talleruser}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taller-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: taller-chapa-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taller-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  taller-network:
+    driver: bridge
