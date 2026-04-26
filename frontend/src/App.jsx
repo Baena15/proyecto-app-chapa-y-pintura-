@@ -1,32 +1,67 @@
-import { useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { Layout } from './components/Layout';
+import { Dashboard } from './pages/Dashboard';
+import { Login } from './pages/Login';
+import { Profile } from './pages/Profile';
+import { WorkOrderDetail } from './pages/WorkOrderDetail';
+import { WorkOrderList } from './pages/WorkOrderList';
+
+function PrivateRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="py-20 text-center text-gray-400">Cargando...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Layout>{children}</Layout>;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/work-orders"
+        element={
+          <PrivateRoute>
+            <WorkOrderList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/work-orders/:id"
+        element={
+          <PrivateRoute>
+            <WorkOrderDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <Profile />
+          </PrivateRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg">
-        <h1 className="mb-2 text-center text-2xl font-bold text-blue-900">
-          Taller Chapa y Pintura
-        </h1>
-        <p className="mb-6 text-center text-sm text-gray-500">
-          App movil para gestion de ordenes de trabajo
-        </p>
-
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => setCount((c) => c + 1)}
-            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow transition active:scale-95"
-          >
-            Contador: {count}
-          </button>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-center text-xs text-gray-400">
-            Estado: En desarrollo
-          </div>
-        </div>
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
