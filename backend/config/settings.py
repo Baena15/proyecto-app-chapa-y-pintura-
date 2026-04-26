@@ -35,10 +35,13 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    # Register your apps here, e.g.:
-    # "apps.users",
-    # "apps.customers",
-    # "apps.workorders",
+    "apps.users",
+    "apps.customers",
+    "apps.workorders",
+    "apps.estimates",
+    "apps.invoices",
+    "apps.photos",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -98,6 +101,9 @@ MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / "media")
 
 # ─── Default Primary Key ────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ─── Custom User Model ──────────────────────
+AUTH_USER_MODEL = "users.User"
 
 # ─── Django REST Framework ──────────────────
 REST_FRAMEWORK = {
