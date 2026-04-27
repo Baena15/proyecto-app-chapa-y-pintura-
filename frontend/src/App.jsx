@@ -11,6 +11,7 @@ import { InvoiceList } from './pages/InvoiceList';
 import { Login } from './pages/Login';
 import { Profile } from './pages/Profile';
 import { WorkOrderDetail } from './pages/WorkOrderDetail';
+import { NewWorkOrder } from './pages/NewWorkOrder';
 import { WorkOrderList } from './pages/WorkOrderList';
 
 function PrivateRoute({ children }) {
@@ -45,6 +46,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <WorkOrderDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/work-orders/new"
+        element={
+          <PrivateRoute>
+            <NewWorkOrder />
           </PrivateRoute>
         }
       />

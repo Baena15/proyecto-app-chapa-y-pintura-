@@ -3,6 +3,15 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 
+const NewWorkOrderButton = () => (
+  <Link
+    to="/work-orders/new"
+    className="flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg active:bg-blue-700"
+  >
+    + Nueva OT
+  </Link>
+);
+
 const TABS = [
   { key: 'all', label: 'Todas' },
   { key: 'pending', label: 'Pendientes' },
@@ -29,7 +38,10 @@ export function WorkOrderList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="text-lg font-bold text-gray-900">Ordenes de Trabajo</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold text-gray-900">Ordenes de Trabajo</h1>
+        <NewWorkOrderButton />
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
