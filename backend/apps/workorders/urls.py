@@ -2,6 +2,7 @@
 from django.urls import path
 
 from .views import (
+    WorkOrderCommentListCreateView,
     WorkOrderDetailView,
     WorkOrderItemDetailView,
     WorkOrderItemListCreateView,
@@ -15,6 +16,11 @@ urlpatterns = [
     path("work-orders/<int:pk>/", WorkOrderDetailView.as_view(), name="workorder-detail"),
     path("work-orders/<int:pk>/status/", change_status, name="workorder-change-status"),
     path("work-orders/<int:pk>/assign/", assign_technician, name="workorder-assign"),
+    path(
+        "work-orders/<int:work_order_pk>/comments/",
+        WorkOrderCommentListCreateView.as_view(),
+        name="workorder-comment-list",
+    ),
     path(
         "work-orders/<int:work_order_pk>/items/",
         WorkOrderItemListCreateView.as_view(),

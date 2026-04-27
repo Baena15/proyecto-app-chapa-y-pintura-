@@ -4,7 +4,16 @@ from rest_framework import serializers
 from apps.customers.serializers import CustomerSerializer, VehicleSerializer
 from apps.users.serializers import UserSerializer
 
-from .models import WorkOrder, WorkOrderItem, WorkOrderStatusHistory
+from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
+
+
+class WorkOrderCommentSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+
+    class Meta:
+        model = WorkOrderComment
+        fields = ["id", "author", "text", "is_internal", "created_at"]
+        read_only_fields = ["author"]
 
 
 class WorkOrderItemSerializer(serializers.ModelSerializer):
@@ -59,6 +68,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     created_by = UserSerializer(read_only=True)
     items = WorkOrderItemSerializer(many=True, read_only=True)
     status_history = WorkOrderStatusHistorySerializer(many=True, read_only=True)
+    comments = serializers.SerializerMethodField()
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
@@ -78,10 +88,18 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             "actual_completion",
             "items",
             "status_history",
+            "comments",
             "created_by",
             "created_at",
             "updated_at",
         ]
+
+    def get_comments(self, obj):
+        user = self.context["request"].user
+        qs = obj.comments.select_related("author")
+        if user.role == "client":
+            qs = qs.filter(is_internal=False)
+        return WorkOrderCommentSerializer(qs, many=True).data
 
 
 class WorkOrderCreateSerializer(serializers.ModelSerializer):

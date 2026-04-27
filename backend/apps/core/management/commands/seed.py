@@ -6,7 +6,7 @@ from apps.customers.models import Customer, Vehicle
 from apps.estimates.models import Estimate, EstimateItem
 from apps.invoices.models import Invoice, InvoiceItem
 from apps.users.models import User
-from apps.workorders.models import WorkOrder, WorkOrderItem, WorkOrderStatusHistory
+from apps.workorders.models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
 
 
 class Command(BaseCommand):
@@ -227,7 +227,33 @@ class Command(BaseCommand):
                     notes="Creacion de OT",
                 )
 
-        self.stdout.write(self.style.SUCCESS("  [OK] 5 ordenes de trabajo creadas"))
+        # ─── COMENTARIOS ──────────────────────
+        WorkOrderComment.objects.get_or_create(
+            work_order=work_orders[0],
+            author=recepcion,
+            text="El cliente necesita el coche para el fin de semana, prioridad alta.",
+            defaults={"is_internal": True},
+        )
+        WorkOrderComment.objects.get_or_create(
+            work_order=work_orders[0],
+            author=mecanico,
+            text="Parachoques reparado, esperando pieza del capo.",
+            defaults={"is_internal": False},
+        )
+        WorkOrderComment.objects.get_or_create(
+            work_order=work_orders[1],
+            author=recepcion,
+            text="Presupuesto enviado al cliente, a la espera de aprobacion.",
+            defaults={"is_internal": False},
+        )
+        WorkOrderComment.objects.get_or_create(
+            work_order=work_orders[3],
+            author=cliente,
+            text="He notado que tambien chirria el freno trasero, podeis mirarlo?",
+            defaults={"is_internal": False},
+        )
+
+        self.stdout.write(self.style.SUCCESS("  [OK] 4 comentarios creados"))
 
         # ─── ITEMS DE TRABAJO ─────────────────
         WorkOrderItem.objects.get_or_create(

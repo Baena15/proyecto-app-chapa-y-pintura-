@@ -5,9 +5,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
-from .models import WorkOrder, WorkOrderItem, WorkOrderStatusHistory
+from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
 from .serializers import (
     StatusChangeSerializer,
+    WorkOrderCommentSerializer,
     WorkOrderCreateSerializer,
     WorkOrderDetailSerializer,
     WorkOrderItemSerializer,
@@ -68,6 +69,49 @@ class WorkOrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
+class WorkOrderCommentListCreateView(generics.ListCreateAPIView):
+    serializer_class = WorkOrderCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        wo_pk = self.kwargs["work_order_pk"]
+        qs = WorkOrderComment.objects.filter(work_order_id=wo_pk).select_related("author")
+        user = self.request.user
+        if user.role == "client":
+            qs = qs.filter(is_internal=False)
+        return qs
+
+    def perform_create(self, serializer):
+        work_order = WorkOrder.objects.get(pk=self.kwargs["work_order_pk"])
+        serializer.save(work_order=work_order, author=self.request.user)
+
+
+def _send_push_to_customer(work_order, title, body):
+    """Send push notification to the customer linked to this work order."""
+    from django.conf import settings
+    from apps.notifications.models import PushSubscription
+    from pywebpush import webpush, WebPushException
+
+    customer_users = work_order.customer.user_accounts.all()
+    subs = PushSubscription.objects.filter(user__in=customer_users)
+    if not subs.exists():
+        return
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {"p256dh": sub.p256dh, "auth": sub.auth},
+                },
+                data=f'{{"title":"{title}","body":"{body}","tag":"wo-{work_order.id}","data":{{"url":"/work-orders/{work_order.id}/"}}}}',
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims=settings.VAPID_CLAIMS,
+            )
+        except WebPushException:
+            pass
+
+
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def change_status(request, pk):
@@ -79,7 +123,6 @@ def change_status(request, pk):
     to_status = serializer.validated_data["to_status"]
     notes = serializer.validated_data.get("notes", "")
 
-    # TODO: Add transition validation logic here
     valid_transitions = {
         "pending": ["in_progress", "cancelled"],
         "in_progress": ["in_bodywork", "waiting_parts", "cancelled"],
@@ -112,6 +155,14 @@ def change_status(request, pk):
         changed_by=request.user,
         notes=notes,
     )
+
+    # Send push notification when car is ready
+    if to_status == "ready":
+        _send_push_to_customer(
+            work_order,
+            title="Tu vehiculo esta listo",
+            body=f"La orden {work_order.code} esta lista para recoger. Pasa por el taller cuando puedas.",
+        )
 
     return Response({"status": to_status, "previous": from_status})
 

@@ -103,3 +103,18 @@ class WorkOrderStatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.work_order.code}: {self.from_status} -> {self.to_status}"
+
+
+class WorkOrderComment(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="work_order_comments")
+    text = models.TextField()
+    is_internal = models.BooleanField(default=False, help_text="Solo visible para el personal del taller")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "work_order_comments"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Comentario {self.author} en {self.work_order.code}"

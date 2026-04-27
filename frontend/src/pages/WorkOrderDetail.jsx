@@ -16,23 +16,12 @@ const STATUS_LABELS = {
   cancelled: 'Cancelado',
 };
 
-const STATUS_COLORS = {
-  pending: 'bg-gray-200',
-  in_progress: 'bg-blue-200',
-  in_bodywork: 'bg-orange-200',
-  waiting_parts: 'bg-yellow-200',
-  in_painting: 'bg-purple-200',
-  quality_control: 'bg-indigo-200',
-  ready: 'bg-green-200',
-  delivered: 'bg-green-300',
-  cancelled: 'bg-red-200',
-};
-
 export function WorkOrderDetail() {
   const { id } = useParams();
-  const { isClient } = useAuth();
+  const { user, isClient } = useAuth();
   const [wo, setWo] = useState(null);
   const [photos, setPhotos] = useState([]);
+  const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -40,7 +29,11 @@ export function WorkOrderDetail() {
   const [newStatus, setNewStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
   const [changingStatus, setChangingStatus] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isInternal, setIsInternal] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
   const fileInputRef = useRef(null);
+  const commentsEndRef = useRef(null);
 
   const loadWorkOrder = async () => {
     try {
@@ -60,16 +53,30 @@ export function WorkOrderDetail() {
     }
   };
 
+  const loadComments = async () => {
+    try {
+      const data = await api.get(`/work-orders/${id}/comments/`);
+      setComments(data.results || data || []);
+    } catch {
+      setComments([]);
+    }
+  };
+
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError('');
       await loadWorkOrder();
       await loadPhotos();
+      await loadComments();
       setLoading(false);
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -105,7 +112,24 @@ export function WorkOrderDetail() {
     }
   };
 
-  // Determine available next statuses
+  const handleSendComment = async () => {
+    if (!newComment.trim()) return;
+    setSendingComment(true);
+    try {
+      await api.post(`/work-orders/${id}/comments/`, {
+        text: newComment.trim(),
+        is_internal: isInternal,
+      });
+      setNewComment('');
+      setIsInternal(false);
+      await loadComments();
+    } catch (err) {
+      alert('Error al enviar comentario: ' + err.message);
+    } finally {
+      setSendingComment(false);
+    }
+  };
+
   const getValidTransitions = (current) => {
     const map = {
       pending: ['in_progress', 'cancelled'],
@@ -179,6 +203,82 @@ export function WorkOrderDetail() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Chat / Comments */}
+      <div className="rounded-xl bg-white shadow-sm">
+        <div className="border-b border-gray-100 p-4">
+          <h2 className="text-sm font-semibold text-gray-700">Chat</h2>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-4">
+          {comments.length === 0 && (
+            <div className="py-4 text-center text-xs text-gray-400">Sin mensajes todavia</div>
+          )}
+          <div className="flex flex-col gap-3">
+            {comments.map((c) => {
+              const isMe = c.author?.id === user?.id;
+              return (
+                <div key={c.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+                      isMe
+                        ? 'bg-blue-600 text-white'
+                        : c.is_internal
+                          ? 'bg-orange-50 text-orange-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {!isMe && (
+                      <div className="mb-0.5 text-xs font-medium opacity-80">
+                        {c.author?.first_name || c.author?.username}
+                        {c.is_internal && ' · Interno'}
+                      </div>
+                    )}
+                    <div>{c.text}</div>
+                    <div
+                      className={`mt-1 text-right text-[10px] ${
+                        isMe ? 'text-blue-200' : 'text-gray-400'
+                      }`}
+                    >
+                      {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={commentsEndRef} />
+          </div>
+        </div>
+        <div className="border-t border-gray-100 p-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+              placeholder="Escribe un mensaje..."
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              onClick={handleSendComment}
+              disabled={sendingComment || !newComment.trim()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white active:bg-blue-700 disabled:opacity-50"
+            >
+              {sendingComment ? '...' : 'Enviar'}
+            </button>
+          </div>
+          {!isClient && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={isInternal}
+                onChange={(e) => setIsInternal(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Nota interna (solo personal del taller)
+            </label>
+          )}
         </div>
       </div>
 
