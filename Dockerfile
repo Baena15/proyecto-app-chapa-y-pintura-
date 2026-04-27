@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create writable directory for SQLite (fallback)
+RUN mkdir -p /app/data && chmod 777 /app/data
+
 # Copy project
 COPY backend/ ./
 
