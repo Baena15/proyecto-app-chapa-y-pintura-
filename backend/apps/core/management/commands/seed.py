@@ -93,6 +93,20 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("  [OK] 3 clientes creados"))
 
+        cliente, _ = User.objects.get_or_create(
+            username="cliente1",
+            defaults={
+                "email": "cliente@email.com",
+                "first_name": "Ismael",
+                "last_name": "Baena",
+                "role": "client",
+                "customer": c1,
+            },
+        )
+        cliente.set_password("pass123")
+        cliente.save()
+        self.stdout.write(self.style.SUCCESS("  [OK] Usuario cliente creado"))
+
         # ─── VEHICULOS ────────────────────────
         v1, _ = Vehicle.objects.get_or_create(
             license_plate="1234ABC",
@@ -303,3 +317,4 @@ class Command(BaseCommand):
         self.stdout.write("  Admin:     admin / admin123")
         self.stdout.write("  Mecanico:  mecanico1 / pass123")
         self.stdout.write("  Recepcion: recepcion / pass123")
+        self.stdout.write("  Cliente:   cliente1 / pass123")

@@ -17,11 +17,23 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
             return InvoiceDetailSerializer
         return InvoiceListSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return self.queryset.filter(customer=user.customer)
+        return self.queryset
+
 
 class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Invoice.objects.select_related("work_order", "customer").prefetch_related("items")
     serializer_class = InvoiceDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Invoice.objects.select_related("work_order", "customer").prefetch_related("items")
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return qs.filter(customer=user.customer)
+        return qs
 
 
 @api_view(["POST"])

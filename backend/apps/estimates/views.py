@@ -20,11 +20,23 @@ class EstimateListCreateView(generics.ListCreateAPIView):
             return EstimateDetailSerializer
         return EstimateListSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return self.queryset.filter(work_order__customer=user.customer)
+        return self.queryset
+
 
 class EstimateDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Estimate.objects.select_related("work_order").prefetch_related("items")
     serializer_class = EstimateDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Estimate.objects.select_related("work_order").prefetch_related("items")
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return qs.filter(work_order__customer=user.customer)
+        return qs
 
 
 @api_view(["POST"])

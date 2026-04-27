@@ -1,25 +1,131 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
+import { useAuth } from '../context/AuthContext';
+
+const STATUS_LABELS = {
+  pending: 'Pendiente',
+  in_progress: 'En progreso',
+  in_bodywork: 'En chapa',
+  waiting_parts: 'Esperando piezas',
+  in_painting: 'En pintura',
+  quality_control: 'Control de calidad',
+  ready: 'Listo',
+  delivered: 'Entregado',
+  cancelled: 'Cancelado',
+};
+
+const STATUS_COLORS = {
+  pending: 'bg-gray-200',
+  in_progress: 'bg-blue-200',
+  in_bodywork: 'bg-orange-200',
+  waiting_parts: 'bg-yellow-200',
+  in_painting: 'bg-purple-200',
+  quality_control: 'bg-indigo-200',
+  ready: 'bg-green-200',
+  delivered: 'bg-green-300',
+  cancelled: 'bg-red-200',
+};
 
 export function WorkOrderDetail() {
   const { id } = useParams();
+  const { isClient } = useAuth();
   const [wo, setWo] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [statusNote, setStatusNote] = useState('');
+  const [changingStatus, setChangingStatus] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const loadWorkOrder = async () => {
+    try {
+      const data = await api.get(`/work-orders/${id}/`);
+      setWo(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const loadPhotos = async () => {
+    try {
+      const data = await api.get(`/work-orders/${id}/photos/`);
+      setPhotos(data.results || data || []);
+    } catch {
+      setPhotos([]);
+    }
+  };
 
   useEffect(() => {
-    api
-      .get(`/work-orders/${id}/`)
-      .then(setWo)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    async function load() {
+      setLoading(true);
+      setError('');
+      await loadWorkOrder();
+      await loadPhotos();
+      setLoading(false);
+    }
+    load();
   }, [id]);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('photo_type', 'progress');
+    setUploading(true);
+    try {
+      await api.postMultipart(`/work-orders/${id}/photos/`, formData);
+      await loadPhotos();
+    } catch (err) {
+      alert('Error al subir foto: ' + err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleChangeStatus = async () => {
+    if (!newStatus) return;
+    setChangingStatus(true);
+    try {
+      await api.post(`/work-orders/${id}/status/`, { to_status: newStatus, notes: statusNote });
+      setShowStatusModal(false);
+      setNewStatus('');
+      setStatusNote('');
+      await loadWorkOrder();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
+  // Determine available next statuses
+  const getValidTransitions = (current) => {
+    const map = {
+      pending: ['in_progress', 'cancelled'],
+      in_progress: ['in_bodywork', 'waiting_parts', 'cancelled'],
+      in_bodywork: ['waiting_parts', 'in_painting', 'cancelled'],
+      waiting_parts: ['in_bodywork', 'cancelled'],
+      in_painting: ['quality_control', 'cancelled'],
+      quality_control: ['ready', 'in_painting', 'cancelled'],
+      ready: ['delivered', 'cancelled'],
+      delivered: [],
+      cancelled: [],
+    };
+    return map[current] || [];
+  };
 
   if (loading) return <div className="py-10 text-center text-gray-400">Cargando...</div>;
   if (error) return <div className="py-10 text-center text-red-500">{error}</div>;
   if (!wo) return null;
+
+  const validNext = getValidTransitions(wo.status);
 
   return (
     <div className="flex flex-col gap-4">
@@ -30,6 +136,14 @@ export function WorkOrderDetail() {
           <StatusBadge status={wo.status} />
         </div>
         <div className="mt-2 text-sm text-gray-600">{wo.description}</div>
+        {!isClient && validNext.length > 0 && (
+          <button
+            onClick={() => setShowStatusModal(true)}
+            className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white active:bg-blue-700"
+          >
+            Cambiar estado
+          </button>
+        )}
       </div>
 
       {/* Vehicle & Customer */}
@@ -56,14 +170,57 @@ export function WorkOrderDetail() {
               <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
               <div>
                 <div className="text-xs font-medium text-gray-700">
-                  {h.from_status} → {h.to_status}
+                  {STATUS_LABELS[h.from_status] || h.from_status} → {STATUS_LABELS[h.to_status] || h.to_status}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {h.changed_by?.first_name} — {new Date(h.created_at).toLocaleDateString()}
+                  {h.changed_by?.first_name || h.changed_by?.username} — {new Date(h.created_at).toLocaleDateString()}
                 </div>
-                {h.notes && <div className="text-xs text-gray-500">{h.notes}</div>}
+                {h.notes && <div className="mt-1 text-xs text-gray-500 italic">“{h.notes}”</div>}
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Photos */}
+      <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">Fotos</h2>
+          {!isClient && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 active:bg-gray-200 disabled:opacity-50"
+            >
+              {uploading ? 'Subiendo...' : '+ Foto'}
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+        {photos.length === 0 && <div className="text-xs text-gray-400">Sin fotos</div>}
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((photo) => (
+            <a
+              key={photo.id}
+              href={photo.image}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block aspect-square overflow-hidden rounded-lg bg-gray-100"
+            >
+              <img
+                src={photo.image}
+                alt={photo.description || 'Foto'}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </a>
           ))}
         </div>
       </div>
@@ -94,6 +251,60 @@ export function WorkOrderDetail() {
           <span className="font-medium">{wo.final_cost}€</span>
         </div>
       </div>
+
+      {/* Status change modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+            <h3 className="mb-3 text-base font-bold text-gray-900">Cambiar estado</h3>
+            <div className="mb-3 text-sm text-gray-500">
+              Estado actual: <span className="font-medium text-gray-700">{STATUS_LABELS[wo.status]}</span>
+            </div>
+            <div className="mb-3 flex flex-col gap-2">
+              {validNext.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setNewStatus(s)}
+                  className={`rounded-lg border px-3 py-2 text-left text-sm ${
+                    newStatus === s
+                      ? 'border-blue-500 bg-blue-50 font-medium text-blue-700'
+                      : 'border-gray-200 text-gray-700'
+                  }`}
+                >
+                  {STATUS_LABELS[s] || s}
+                </button>
+              ))}
+            </div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Nota (opcional)</label>
+            <textarea
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              className="mb-4 w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none"
+              rows={2}
+              placeholder="Motivo del cambio..."
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setNewStatus('');
+                  setStatusNote('');
+                }}
+                className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-700 active:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleChangeStatus}
+                disabled={!newStatus || changingStatus}
+                className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white active:bg-blue-700 disabled:opacity-50"
+              >
+                {changingStatus ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

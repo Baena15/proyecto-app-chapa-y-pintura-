@@ -29,17 +29,25 @@ class WorkOrderListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == "client" and hasattr(user, "customer_profile"):
-            return self.queryset.filter(customer=user.customer_profile)
+        if user.role == "client" and user.customer:
+            return self.queryset.filter(customer=user.customer)
         if user.role in ["mechanic", "painter"]:
             return self.queryset.filter(assigned_to=user)
         return self.queryset
 
 
 class WorkOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = WorkOrder.objects.select_related("vehicle", "customer", "assigned_to", "created_by").prefetch_related("items", "status_history")
     serializer_class = WorkOrderDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = WorkOrder.objects.select_related("vehicle", "customer", "assigned_to", "created_by").prefetch_related("items", "status_history")
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return qs.filter(customer=user.customer)
+        if user.role in ["mechanic", "painter"]:
+            return qs.filter(assigned_to=user)
+        return qs
 
 
 class WorkOrderItemListCreateView(generics.ListCreateAPIView):

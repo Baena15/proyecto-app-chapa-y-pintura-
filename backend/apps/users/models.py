@@ -17,6 +17,13 @@ class User(AbstractUser):
     )
     phone = models.CharField(max_length=20, blank=True)
     avatar = models.ImageField(upload_to="avatars/", blank=True)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="user_accounts",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

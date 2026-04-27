@@ -145,6 +145,11 @@ CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://baena15.github.io"
 ).split(",")
 
+# ─── Web Push (VAPID) ───────────────────────
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "BNrHGl4u4ashKqB7TcgQTdVdqVZvx9I_dylVonPAlZS2wfpy1AjrnXg4H6UyVQ5LPG4DmkGU2LI-exVeeylqNFo")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "vr6Opi18jQUM8OA4051Zvtl440-ok9vbffzzOMMZ3dk")
+VAPID_CLAIMS = {"sub": "mailto:admin@tallerchapa.com"}
+
 # ─── JWT ────────────────────────────────────
 from datetime import timedelta
 
