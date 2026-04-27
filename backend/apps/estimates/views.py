@@ -48,7 +48,8 @@ def send_estimate(request, pk):
     estimate.status = "sent"
     estimate.sent_at = timezone.now()
     estimate.save()
-    # TODO: Trigger notification to customer
+    from apps.notifications.utils import notify_estimate_sent
+    notify_estimate_sent(estimate)
     return Response({"status": "sent"})
 
 

@@ -13,6 +13,7 @@ export function InvoiceDetail() {
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('cash');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     api
@@ -38,6 +39,19 @@ export function InvoiceDetail() {
       setError(err.message);
     } finally {
       setPayLoading(false);
+    }
+  };
+
+  const handleAction = async (action) => {
+    setActionLoading(true);
+    try {
+      await api.post(`/invoices/${id}/${action}/`, {});
+      const updated = await api.get(`/invoices/${id}/`);
+      setInvoice(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -124,6 +138,17 @@ export function InvoiceDetail() {
           </div>
         )}
       </div>
+
+      {/* Send button */}
+      {invoice.status === 'draft' && (
+        <button
+          onClick={() => handleAction('send')}
+          disabled={actionLoading}
+          className="w-full rounded-lg bg-purple-600 py-2 text-sm font-medium text-white active:bg-purple-700 disabled:opacity-50"
+        >
+          {actionLoading ? '...' : '📧 Enviar por email'}
+        </button>
+      )}
 
       {/* Pay button */}
       {invoice.status !== 'paid' && remaining > 0 && (

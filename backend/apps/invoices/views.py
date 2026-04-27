@@ -44,6 +44,8 @@ def send_invoice(request, pk):
         return Response({"detail": "Solo se puede enviar una factura en borrador"}, status=status.HTTP_400_BAD_REQUEST)
     invoice.status = "sent"
     invoice.save()
+    from apps.notifications.utils import notify_invoice_sent
+    notify_invoice_sent(invoice)
     return Response({"status": "sent"})
 
 

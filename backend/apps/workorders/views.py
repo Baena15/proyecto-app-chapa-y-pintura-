@@ -87,7 +87,9 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save()
+        appointment = serializer.save()
+        from apps.notifications.utils import notify_appointment_created
+        notify_appointment_created(appointment)
 
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -223,13 +225,15 @@ def change_status(request, pk):
         notes=notes,
     )
 
-    # Send push notification when car is ready
+    # Send push notification and email when car is ready
     if to_status == "ready":
         _send_push_to_customer(
             work_order,
             title="Tu vehiculo esta listo",
             body=f"La orden {work_order.code} esta lista para recoger. Pasa por el taller cuando puedas.",
         )
+        from apps.notifications.utils import notify_work_order_ready
+        notify_work_order_ready(work_order)
 
     return Response({"status": to_status, "previous": from_status})
 
