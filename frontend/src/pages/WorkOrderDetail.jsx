@@ -32,6 +32,11 @@ export function WorkOrderDetail() {
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
+  const [survey, setSurvey] = useState(null);
+  const [showSurveyForm, setShowSurveyForm] = useState(false);
+  const [surveyRating, setSurveyRating] = useState(0);
+  const [surveyComment, setSurveyComment] = useState('');
+  const [submittingSurvey, setSubmittingSurvey] = useState(false);
   const fileInputRef = useRef(null);
   const commentsEndRef = useRef(null);
 
@@ -62,6 +67,15 @@ export function WorkOrderDetail() {
     }
   };
 
+  const loadSurvey = async () => {
+    try {
+      const data = await api.get(`/work-orders/${id}/survey/`);
+      setSurvey(data);
+    } catch {
+      setSurvey(null);
+    }
+  };
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -69,6 +83,7 @@ export function WorkOrderDetail() {
       await loadWorkOrder();
       await loadPhotos();
       await loadComments();
+      await loadSurvey();
       setLoading(false);
     }
     load();
@@ -109,6 +124,23 @@ export function WorkOrderDetail() {
       alert('Error: ' + err.message);
     } finally {
       setChangingStatus(false);
+    }
+  };
+
+  const handleSubmitSurvey = async () => {
+    if (surveyRating === 0) return;
+    setSubmittingSurvey(true);
+    try {
+      await api.post(`/work-orders/${id}/survey/`, {
+        rating: surveyRating,
+        comment: surveyComment.trim(),
+      });
+      setShowSurveyForm(false);
+      await loadSurvey();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSubmittingSurvey(false);
     }
   };
 
@@ -351,6 +383,74 @@ export function WorkOrderDetail() {
           <span className="font-medium">{wo.final_cost}€</span>
         </div>
       </div>
+
+      {/* Satisfaction Survey */}
+      {(wo.status === 'delivered' || survey) && (
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-gray-700">Valoracion del servicio</h2>
+          {survey ? (
+            <div>
+              <div className="flex gap-1 text-2xl">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <span key={s} className={s <= survey.rating ? 'text-yellow-400' : 'text-gray-200'}>
+                    ★
+                  </span>
+                ))}
+              </div>
+              {survey.comment && (
+                <p className="mt-2 text-sm italic text-gray-600">“{survey.comment}”</p>
+              )}
+            </div>
+          ) : isClient ? (
+            showSurveyForm ? (
+              <div>
+                <div className="mb-3 flex gap-2">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSurveyRating(s)}
+                      className={`text-3xl ${s <= surveyRating ? 'text-yellow-400' : 'text-gray-200'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={surveyComment}
+                  onChange={(e) => setSurveyComment(e.target.value)}
+                  placeholder="Comentario opcional..."
+                  className="mb-3 w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-blue-500 focus:outline-none"
+                  rows={2}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSurveyForm(false)}
+                    className="flex-1 rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSubmitSurvey}
+                    disabled={surveyRating === 0 || submittingSurvey}
+                    className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    {submittingSurvey ? 'Enviando...' : 'Enviar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowSurveyForm(true)}
+                className="w-full rounded-lg bg-yellow-50 py-2 text-sm font-medium text-yellow-700 active:bg-yellow-100"
+              >
+                ⭐ Valorar este servicio
+              </button>
+            )
+          ) : (
+            <div className="text-xs text-gray-400">El cliente aun no ha valorado este servicio</div>
+          )}
+        </div>
+      )}
 
       {/* Status change modal */}
       {showStatusModal && (

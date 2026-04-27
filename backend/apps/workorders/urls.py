@@ -7,6 +7,7 @@ from .views import (
     WorkOrderItemDetailView,
     WorkOrderItemListCreateView,
     WorkOrderListCreateView,
+    WorkOrderSurveyView,
     assign_technician,
     change_status,
 )
@@ -27,4 +28,9 @@ urlpatterns = [
         name="workorder-item-list",
     ),
     path("work-order-items/<int:pk>/", WorkOrderItemDetailView.as_view(), name="workorder-item-detail"),
+    path(
+        "work-orders/<int:work_order_pk>/survey/",
+        WorkOrderSurveyView.as_view(),
+        name="workorder-survey",
+    ),
 ]

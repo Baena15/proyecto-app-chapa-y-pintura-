@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 
 export function EstimateDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [estimate, setEstimate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +45,12 @@ export function EstimateDetail() {
           <StatusBadge status={estimate.status} />
         </div>
         <div className="mt-2 text-sm text-gray-600">OT {estimate.work_order_code}</div>
+        <button
+          onClick={() => navigate(`/estimates/${id}/print`)}
+          className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 py-2 text-sm font-medium text-blue-700 active:bg-blue-100"
+        >
+          📄 Ver PDF / Imprimir
+        </button>
       </div>
 
       {/* Totals */}

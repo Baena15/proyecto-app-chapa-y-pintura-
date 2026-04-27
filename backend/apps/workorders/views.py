@@ -3,9 +3,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import SearchFilter
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
+from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 from .serializers import (
     StatusChangeSerializer,
     WorkOrderCommentSerializer,
@@ -13,6 +15,7 @@ from .serializers import (
     WorkOrderDetailSerializer,
     WorkOrderItemSerializer,
     WorkOrderListSerializer,
+    WorkOrderSurveySerializer,
 )
 
 
@@ -183,6 +186,51 @@ def assign_technician(request, pk):
     work_order.assigned_to = technician
     work_order.save()
     return Response({"assigned_to": UserSerializer(technician).data})
+
+
+class WorkOrderSurveyView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_work_order(self, pk):
+        work_order = get_object_or_404(WorkOrder, pk=pk)
+        user = self.request.user
+        if user.role == "client" and user.customer and work_order.customer != user.customer:
+            raise WorkOrder.DoesNotExist
+        if user.role in ["mechanic", "painter"] and work_order.assigned_to != user:
+            raise WorkOrder.DoesNotExist
+        return work_order
+
+    def get(self, request, work_order_pk):
+        work_order = self._get_work_order(work_order_pk)
+        try:
+            survey = work_order.survey
+        except WorkOrderSurvey.DoesNotExist:
+            return Response({"detail": "Encuesta no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = WorkOrderSurveySerializer(survey)
+        return Response(serializer.data)
+
+    def post(self, request, work_order_pk):
+        work_order = get_object_or_404(WorkOrder, pk=work_order_pk)
+        user = request.user
+        if not (user.role == "client" and user.customer and work_order.customer == user.customer):
+            return Response(
+                {"detail": "Solo el cliente vinculado puede crear la encuesta."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if work_order.status != "delivered":
+            return Response(
+                {"detail": "Solo se puede encuestar una orden entregada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if hasattr(work_order, "survey"):
+            return Response(
+                {"detail": "Esta orden ya tiene una encuesta."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = WorkOrderSurveySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(work_order=work_order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 # Import here to avoid circular imports

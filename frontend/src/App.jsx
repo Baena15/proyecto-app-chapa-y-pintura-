@@ -6,8 +6,10 @@ import { CustomerList } from './pages/CustomerList';
 import { Dashboard } from './pages/Dashboard';
 import { EstimateDetail } from './pages/EstimateDetail';
 import { EstimateList } from './pages/EstimateList';
+import { EstimatePrint } from './pages/EstimatePrint';
 import { InvoiceDetail } from './pages/InvoiceDetail';
 import { InvoiceList } from './pages/InvoiceList';
+import { InvoicePrint } from './pages/InvoicePrint';
 import { Login } from './pages/Login';
 import { Profile } from './pages/Profile';
 import { WorkOrderDetail } from './pages/WorkOrderDetail';
@@ -90,6 +92,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/estimates/:id/print"
+        element={
+          <PrivateRoute>
+            <EstimatePrint />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/invoices"
         element={
           <PrivateRoute>
@@ -102,6 +112,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <InvoiceDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices/:id/print"
+        element={
+          <PrivateRoute>
+            <InvoicePrint />
           </PrivateRoute>
         }
       />

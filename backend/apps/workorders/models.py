@@ -1,4 +1,5 @@
 # ─── workorders/models.py ────────────────────
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.customers.models import Customer, Vehicle
@@ -118,3 +119,16 @@ class WorkOrderComment(models.Model):
 
     def __str__(self):
         return f"Comentario {self.author} en {self.work_order.code}"
+
+
+class WorkOrderSurvey(models.Model):
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name="survey")
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "work_order_surveys"
+
+    def __str__(self):
+        return f"Encuesta {self.work_order.code} - {self.rating}/5"

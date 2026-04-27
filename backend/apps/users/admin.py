@@ -11,5 +11,5 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ["role", "is_active", "created_at"]
     search_fields = ["username", "email", "first_name", "last_name"]
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Perfil", {"fields": ("role", "phone", "avatar")}),
+        ("Perfil", {"fields": ("role", "phone", "avatar", "customer")}),
     )

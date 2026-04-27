@@ -6,7 +6,7 @@ from apps.customers.models import Customer, Vehicle
 from apps.estimates.models import Estimate, EstimateItem
 from apps.invoices.models import Invoice, InvoiceItem
 from apps.users.models import User
-from apps.workorders.models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
+from apps.workorders.models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 
 
 class Command(BaseCommand):
@@ -336,7 +336,12 @@ class Command(BaseCommand):
             defaults={"quantity": 1, "unit_price": 600.00},
         )
 
-        self.stdout.write(self.style.SUCCESS("  [OK] 1 factura creada"))
+        # ─── ENCUESTA DE SATISFACCION ─────────
+        WorkOrderSurvey.objects.get_or_create(
+            work_order=work_orders[2],
+            defaults={"rating": 5, "comment": "Excelente trabajo, el coche quedo como nuevo."},
+        )
+        self.stdout.write(self.style.SUCCESS("  [OK] 1 encuesta de satisfaccion creada"))
 
         self.stdout.write(self.style.SUCCESS("\n[OK] Seed completado! Datos de demo listos."))
         self.stdout.write(self.style.NOTICE("\nCredenciales de prueba:"))

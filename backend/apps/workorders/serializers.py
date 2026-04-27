@@ -4,7 +4,7 @@ from rest_framework import serializers
 from apps.customers.serializers import CustomerSerializer, VehicleSerializer
 from apps.users.serializers import UserSerializer
 
-from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory
+from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 
 
 class WorkOrderCommentSerializer(serializers.ModelSerializer):
@@ -126,6 +126,12 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         validated_data["customer"] = Customer.objects.get(pk=customer_id)
         validated_data["created_by"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class WorkOrderSurveySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkOrderSurvey
+        fields = ["id", "work_order", "rating", "comment", "created_at"]
 
 
 class StatusChangeSerializer(serializers.Serializer):
