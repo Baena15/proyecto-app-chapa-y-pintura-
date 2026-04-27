@@ -2,6 +2,7 @@
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
 from .models import Estimate
@@ -10,7 +11,7 @@ from .serializers import EstimateDetailSerializer, EstimateListSerializer
 
 class EstimateListCreateView(generics.ListCreateAPIView):
     queryset = Estimate.objects.select_related("work_order").prefetch_related("items")
-    filter_backends = [generics.filters.SearchFilter]
+    filter_backends = [SearchFilter]
     search_fields = ["work_order__code"]
     permission_classes = [permissions.IsAuthenticated]
 

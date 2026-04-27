@@ -13,7 +13,7 @@ class Command(BaseCommand):
     help = "Puebla la base de datos con datos de demo para el taller"
 
     def handle(self, *args, **kwargs):
-        self.stdout.write(self.style.NOTICE("🌱 Creando datos de demo..."))
+        self.stdout.write(self.style.NOTICE("Creando datos de demo..."))
 
         # ─── USUARIOS ─────────────────────────
         admin, _ = User.objects.get_or_create(
@@ -54,7 +54,7 @@ class Command(BaseCommand):
         recepcion.set_password("pass123")
         recepcion.save()
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 3 usuarios creados"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 3 usuarios creados"))
 
         # ─── CLIENTES ─────────────────────────
         c1, _ = Customer.objects.get_or_create(
@@ -91,7 +91,7 @@ class Command(BaseCommand):
             },
         )
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 3 clientes creados"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 3 clientes creados"))
 
         # ─── VEHICULOS ────────────────────────
         v1, _ = Vehicle.objects.get_or_create(
@@ -141,7 +141,7 @@ class Command(BaseCommand):
             },
         )
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 4 vehiculos creados"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 4 vehiculos creados"))
 
         # ─── ORDENES DE TRABAJO ───────────────
         wo_data = [
@@ -213,7 +213,7 @@ class Command(BaseCommand):
                     notes="Creacion de OT",
                 )
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 5 ordenes de trabajo creadas"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 5 ordenes de trabajo creadas"))
 
         # ─── ITEMS DE TRABAJO ─────────────────
         WorkOrderItem.objects.get_or_create(
@@ -252,7 +252,7 @@ class Command(BaseCommand):
             defaults={"item_type": "painting", "estimated_hours": 3, "labor_cost": 120, "parts_cost": 30},
         )
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 7 items de trabajo creados"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 7 items de trabajo creados"))
 
         # ─── PRESUPUESTOS ─────────────────────
         est1, _ = Estimate.objects.get_or_create(
@@ -275,7 +275,7 @@ class Command(BaseCommand):
         )
         est2.calculate_totals()
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 2 presupuestos creados"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 2 presupuestos creados"))
 
         # ─── FACTURAS ─────────────────────────
         inv1, _ = Invoice.objects.get_or_create(
@@ -296,9 +296,9 @@ class Command(BaseCommand):
             defaults={"quantity": 1, "unit_price": 600.00},
         )
 
-        self.stdout.write(self.style.SUCCESS("  ✅ 1 factura creada"))
+        self.stdout.write(self.style.SUCCESS("  [OK] 1 factura creada"))
 
-        self.stdout.write(self.style.SUCCESS("\n🎉 Seed completado! Datos de demo listos."))
+        self.stdout.write(self.style.SUCCESS("\n[OK] Seed completado! Datos de demo listos."))
         self.stdout.write(self.style.NOTICE("\nCredenciales de prueba:"))
         self.stdout.write("  Admin:     admin / admin123")
         self.stdout.write("  Mecanico:  mecanico1 / pass123")
