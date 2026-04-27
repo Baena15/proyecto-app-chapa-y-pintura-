@@ -1,5 +1,9 @@
 // ─── API Client ──────────────────────────────
-const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const DEFAULT_API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+
+function getApiUrl() {
+  return localStorage.getItem('api_url') || DEFAULT_API_URL;
+}
 
 function getToken() {
   return localStorage.getItem('access_token');
@@ -19,6 +23,7 @@ function clearTokens() {
 async function refreshAccessToken() {
   const refresh = localStorage.getItem('refresh_token');
   if (!refresh) return null;
+  const API_URL = getApiUrl();
   try {
     const res = await fetch(`${API_URL}/auth/token/refresh/`, {
       method: 'POST',
@@ -36,6 +41,7 @@ async function refreshAccessToken() {
 }
 
 async function request(path, options = {}) {
+  const API_URL = getApiUrl();
   const url = `${API_URL}${path}`;
   const headers = {
     'Content-Type': 'application/json',
