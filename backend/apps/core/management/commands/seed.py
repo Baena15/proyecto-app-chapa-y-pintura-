@@ -6,7 +6,7 @@ from apps.customers.models import Customer, Vehicle
 from apps.estimates.models import Estimate, EstimateItem
 from apps.invoices.models import Invoice, InvoiceItem
 from apps.users.models import User
-from apps.workorders.models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
+from apps.workorders.models import Appointment, WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 
 
 class Command(BaseCommand):
@@ -341,7 +341,44 @@ class Command(BaseCommand):
             work_order=work_orders[2],
             defaults={"rating": 5, "comment": "Excelente trabajo, el coche quedo como nuevo."},
         )
-        self.stdout.write(self.style.SUCCESS("  [OK] 1 encuesta de satisfaccion creada"))
+        # ─── CITAS ────────────────────────────
+        from datetime import date, time
+        Appointment.objects.get_or_create(
+            title="Entrada coche Ana Martinez",
+            defaults={
+                "customer": c1,
+                "vehicle": v1,
+                "date": date.today(),
+                "time": time(9, 0),
+                "description": "Revision inicial del golpe en parachoques",
+                "status": "completed",
+                "work_order": work_orders[0],
+            },
+        )
+        Appointment.objects.get_or_create(
+            title="Entrega coche Laura Fernandez",
+            defaults={
+                "customer": c3,
+                "vehicle": v3,
+                "date": date.today(),
+                "time": time(18, 0),
+                "description": "Entrega del coche reparado",
+                "status": "confirmed",
+                "work_order": work_orders[2],
+            },
+        )
+        Appointment.objects.get_or_create(
+            title="Nueva cita Carlos Ruiz",
+            defaults={
+                "customer": c2,
+                "vehicle": v2,
+                "date": date.today(),
+                "time": time(11, 30),
+                "description": "Presupuesto para pintura lateral",
+                "status": "pending",
+            },
+        )
+        self.stdout.write(self.style.SUCCESS("  [OK] 3 citas creadas"))
 
         self.stdout.write(self.style.SUCCESS("\n[OK] Seed completado! Datos de demo listos."))
         self.stdout.write(self.style.NOTICE("\nCredenciales de prueba:"))

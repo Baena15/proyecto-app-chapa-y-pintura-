@@ -132,3 +132,29 @@ class WorkOrderSurvey(models.Model):
 
     def __str__(self):
         return f"Encuesta {self.work_order.code} - {self.rating}/5"
+
+
+class Appointment(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pendiente"),
+        ("confirmed", "Confirmada"),
+        ("completed", "Completada"),
+        ("cancelled", "Cancelada"),
+    ]
+
+    title = models.CharField(max_length=255)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="appointments")
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="appointments", null=True, blank=True)
+    date = models.DateField()
+    time = models.TimeField(null=True, blank=True)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name="appointment")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "appointments"
+        ordering = ["date", "time"]
+
+    def __str__(self):
+        return f"{self.title} - {self.date}"

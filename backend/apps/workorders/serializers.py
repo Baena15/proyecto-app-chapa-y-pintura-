@@ -4,7 +4,7 @@ from rest_framework import serializers
 from apps.customers.serializers import CustomerSerializer, VehicleSerializer
 from apps.users.serializers import UserSerializer
 
-from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
+from .models import Appointment, WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 
 
 class WorkOrderCommentSerializer(serializers.ModelSerializer):
@@ -14,6 +14,19 @@ class WorkOrderCommentSerializer(serializers.ModelSerializer):
         model = WorkOrderComment
         fields = ["id", "author", "text", "is_internal", "created_at"]
         read_only_fields = ["author"]
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+    vehicle = VehicleSerializer(read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "id", "title", "customer", "vehicle", "date", "time",
+            "description", "status", "status_display", "work_order", "created_at",
+        ]
 
 
 class WorkOrderItemSerializer(serializers.ModelSerializer):

@@ -2,6 +2,7 @@
 from django.contrib import admin
 
 from .models import (
+    Appointment,
     WorkOrder,
     WorkOrderComment,
     WorkOrderItem,
@@ -71,3 +72,11 @@ class WorkOrderSurveyAdmin(admin.ModelAdmin):
     def comment_preview(self, obj):
         return obj.comment[:50] + "..." if obj.comment and len(obj.comment) > 50 else obj.comment
     comment_preview.short_description = "Comentario"
+
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ["title", "customer", "date", "time", "status", "work_order"]
+    list_filter = ["status", "date"]
+    search_fields = ["title", "customer__first_name", "customer__last_name"]
+    date_hierarchy = "date"

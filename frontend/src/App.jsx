@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { CustomerDetail } from './pages/CustomerDetail';
+import { AppointmentList } from './pages/AppointmentList';
 import { CustomerList } from './pages/CustomerList';
 import { Dashboard } from './pages/Dashboard';
 import { EstimateDetail } from './pages/EstimateDetail';
@@ -56,6 +57,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <NewWorkOrder />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/appointments"
+        element={
+          <PrivateRoute>
+            <AppointmentList />
           </PrivateRoute>
         }
       />

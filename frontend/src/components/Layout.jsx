@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 const STAFF_NAV = [
   { path: '/', label: 'Inicio', icon: '🏠' },
+  { path: '/appointments', label: 'Citas', icon: '📅' },
   { path: '/work-orders', label: 'OTs', icon: '📋' },
   { path: '/customers', label: 'Clientes', icon: '👥' },
   { path: '/estimates', label: 'Presup.', icon: '📄' },
@@ -11,6 +12,7 @@ const STAFF_NAV = [
 
 const CLIENT_NAV = [
   { path: '/', label: 'Inicio', icon: '🏠' },
+  { path: '/appointments', label: 'Citas', icon: '📅' },
   { path: '/work-orders', label: 'Mis OTs', icon: '📋' },
   { path: '/estimates', label: 'Presup.', icon: '📄' },
   { path: '/invoices', label: 'Facturas', icon: '💶' },

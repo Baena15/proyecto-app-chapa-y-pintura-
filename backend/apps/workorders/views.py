@@ -7,8 +7,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
+from .models import Appointment, WorkOrder, WorkOrderComment, WorkOrderItem, WorkOrderStatusHistory, WorkOrderSurvey
 from .serializers import (
+    AppointmentSerializer,
     StatusChangeSerializer,
     WorkOrderCommentSerializer,
     WorkOrderCreateSerializer,
@@ -70,6 +71,69 @@ class WorkOrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = WorkOrderItem.objects.all()
     serializer_class = WorkOrderItemSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class AppointmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["date", "status", "customer"]
+
+    def get_queryset(self):
+        qs = Appointment.objects.select_related("customer", "vehicle", "work_order")
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return qs.filter(customer=user.customer)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Appointment.objects.select_related("customer", "vehicle", "work_order")
+        user = self.request.user
+        if user.role == "client" and user.customer:
+            return qs.filter(customer=user.customer)
+        return qs
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def create_estimate_from_work_order(request, pk):
+    """Create an estimate linked to a work order."""
+    from apps.estimates.models import Estimate
+    work_order = get_object_or_404(WorkOrder, pk=pk)
+    estimate, created = Estimate.objects.get_or_create(
+        work_order=work_order,
+        defaults={"status": "draft", "valid_until": work_order.estimated_completion or timezone.now().date()},
+    )
+    if not created:
+        return Response({"detail": "Ya existe un presupuesto para esta OT"}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"id": estimate.id, "status": "created"})
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def create_invoice_from_work_order(request, pk):
+    """Create an invoice linked to a work order."""
+    from apps.invoices.models import Invoice
+    work_order = get_object_or_404(WorkOrder, pk=pk)
+    invoice, created = Invoice.objects.get_or_create(
+        work_order=work_order,
+        defaults={
+            "customer": work_order.customer,
+            "status": "draft",
+            "due_date": timezone.now().date(),
+        },
+    )
+    if not created:
+        return Response({"detail": "Ya existe una factura para esta OT"}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"id": invoice.id, "status": "created"})
 
 
 class WorkOrderCommentListCreateView(generics.ListCreateAPIView):

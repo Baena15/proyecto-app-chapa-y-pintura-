@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ const STATUS_LABELS = {
 
 export function WorkOrderDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, isClient } = useAuth();
   const [wo, setWo] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -37,6 +38,8 @@ export function WorkOrderDetail() {
   const [surveyRating, setSurveyRating] = useState(0);
   const [surveyComment, setSurveyComment] = useState('');
   const [submittingSurvey, setSubmittingSurvey] = useState(false);
+  const [creatingEstimate, setCreatingEstimate] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
   const fileInputRef = useRef(null);
   const commentsEndRef = useRef(null);
 
@@ -127,6 +130,30 @@ export function WorkOrderDetail() {
     }
   };
 
+  const handleCreateEstimate = async () => {
+    setCreatingEstimate(true);
+    try {
+      const res = await api.post(`/work-orders/${id}/create-estimate/`, {});
+      navigate(`/estimates/${res.id}`);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setCreatingEstimate(false);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    setCreatingInvoice(true);
+    try {
+      const res = await api.post(`/work-orders/${id}/create-invoice/`, {});
+      navigate(`/invoices/${res.id}`);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setCreatingInvoice(false);
+    }
+  };
+
   const handleSubmitSurvey = async () => {
     if (surveyRating === 0) return;
     setSubmittingSurvey(true);
@@ -199,6 +226,24 @@ export function WorkOrderDetail() {
           >
             Cambiar estado
           </button>
+        )}
+        {!isClient && (
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={handleCreateEstimate}
+              disabled={creatingEstimate}
+              className="flex-1 rounded-lg border border-purple-200 bg-purple-50 py-2 text-sm font-medium text-purple-700 active:bg-purple-100 disabled:opacity-50"
+            >
+              {creatingEstimate ? '...' : '📄 Crear presupuesto'}
+            </button>
+            <button
+              onClick={handleCreateInvoice}
+              disabled={creatingInvoice}
+              className="flex-1 rounded-lg border border-green-200 bg-green-50 py-2 text-sm font-medium text-green-700 active:bg-green-100 disabled:opacity-50"
+            >
+              {creatingInvoice ? '...' : '💶 Crear factura'}
+            </button>
+          </div>
         )}
       </div>
 
