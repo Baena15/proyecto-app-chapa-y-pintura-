@@ -8,6 +8,14 @@ const STATUS_COLORS = {
   ready: 'bg-green-100 text-green-700',
   delivered: 'bg-green-200 text-green-800',
   cancelled: 'bg-red-100 text-red-700',
+  // estimate statuses
+  draft: 'bg-gray-100 text-gray-600',
+  sent: 'bg-blue-100 text-blue-700',
+  approved: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
+  // invoice statuses
+  paid: 'bg-green-100 text-green-700',
+  overdue: 'bg-orange-100 text-orange-700',
 };
 
 const STATUS_LABELS = {
@@ -20,6 +28,14 @@ const STATUS_LABELS = {
   ready: 'Listo',
   delivered: 'Entregado',
   cancelled: 'Cancelado',
+  // estimate
+  draft: 'Borrador',
+  sent: 'Enviado',
+  approved: 'Aprobado',
+  rejected: 'Rechazado',
+  // invoice
+  paid: 'Pagado',
+  overdue: 'Vencido',
 };
 
 export function StatusBadge({ status }) {

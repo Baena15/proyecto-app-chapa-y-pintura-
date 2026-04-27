@@ -4,12 +4,19 @@ import { useAuth } from '../context/AuthContext';
 const NAV_ITEMS = [
   { path: '/', label: 'Inicio', icon: '🏠' },
   { path: '/work-orders', label: 'OTs', icon: '📋' },
-  { path: '/profile', label: 'Perfil', icon: '👤' },
+  { path: '/customers', label: 'Clientes', icon: '👥' },
+  { path: '/estimates', label: 'Presup.', icon: '📄' },
+  { path: '/invoices', label: 'Facturas', icon: '💶' },
 ];
 
 export function Layout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
+
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -18,7 +25,9 @@ export function Layout({ children }) {
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-blue-900">TallerApp</h1>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">{user?.first_name}</span>
+            <Link to="/profile" className="text-xs text-gray-500">
+              {user?.first_name}
+            </Link>
             <button
               onClick={logout}
               className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 active:bg-gray-200"
@@ -36,7 +45,7 @@ export function Layout({ children }) {
       <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white px-4 pb-safe">
         <div className="flex justify-around">
           {NAV_ITEMS.map((item) => {
-            const active = location.pathname === item.path;
+            const active = isActive(item.path);
             return (
               <Link
                 key={item.path}

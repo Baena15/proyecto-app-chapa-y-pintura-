@@ -1,7 +1,13 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
+import { CustomerDetail } from './pages/CustomerDetail';
+import { CustomerList } from './pages/CustomerList';
 import { Dashboard } from './pages/Dashboard';
+import { EstimateDetail } from './pages/EstimateDetail';
+import { EstimateList } from './pages/EstimateList';
+import { InvoiceDetail } from './pages/InvoiceDetail';
+import { InvoiceList } from './pages/InvoiceList';
 import { Login } from './pages/Login';
 import { Profile } from './pages/Profile';
 import { WorkOrderDetail } from './pages/WorkOrderDetail';
@@ -39,6 +45,54 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <WorkOrderDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/customers"
+        element={
+          <PrivateRoute>
+            <CustomerList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/customers/:id"
+        element={
+          <PrivateRoute>
+            <CustomerDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/estimates"
+        element={
+          <PrivateRoute>
+            <EstimateList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/estimates/:id"
+        element={
+          <PrivateRoute>
+            <EstimateDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices"
+        element={
+          <PrivateRoute>
+            <InvoiceList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invoices/:id"
+        element={
+          <PrivateRoute>
+            <InvoiceDetail />
           </PrivateRoute>
         }
       />
