@@ -161,8 +161,13 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 # Option B: Separate vars CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
 if CLOUDINARY_URL:
-    import cloudinary
-    cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+    from urllib.parse import urlparse
+    parsed = urlparse(CLOUDINARY_URL)
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": parsed.hostname,
+        "API_KEY": parsed.username,
+        "API_SECRET": parsed.password,
+    }
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 else:
     CLOUDINARY_STORAGE = {
