@@ -130,6 +130,18 @@ export function WorkOrderDetail() {
     }
   };
 
+  const handleWhatsApp = async () => {
+    setChangingStatus(true);
+    try {
+      const res = await api.post(`/work-orders/${id}/whatsapp/`, {});
+      alert(res.success ? 'Notificacion WhatsApp enviada' : 'Error: ' + res.error);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
   const handleCreateEstimate = async () => {
     setCreatingEstimate(true);
     try {
@@ -225,6 +237,15 @@ export function WorkOrderDetail() {
             className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white active:bg-blue-700"
           >
             Cambiar estado
+          </button>
+        )}
+        {!isClient && (
+          <button
+            onClick={handleWhatsApp}
+            disabled={changingStatus}
+            className="mt-2 w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white active:bg-green-700 disabled:opacity-50"
+          >
+            {changingStatus ? '...' : '💬 Notificar por WhatsApp'}
           </button>
         )}
         {!isClient && (

@@ -32,6 +32,18 @@ export function EstimateDetail() {
     }
   };
 
+  const handleWhatsApp = async () => {
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/estimates/${id}/whatsapp/`, {});
+      alert(res.success ? 'Mensaje de WhatsApp enviado' : 'Error: ' + res.error);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <div className="py-10 text-center text-gray-400">Cargando...</div>;
   if (error) return <div className="py-10 text-center text-red-500">{error}</div>;
   if (!estimate) return null;
@@ -111,13 +123,22 @@ export function EstimateDetail() {
 
       {/* Actions */}
       {estimate.status === 'draft' && (
-        <button
-          onClick={() => handleAction('send')}
-          disabled={actionLoading}
-          className="w-full rounded-lg bg-purple-600 py-2 text-sm font-medium text-white active:bg-purple-700 disabled:opacity-50"
-        >
-          {actionLoading ? '...' : '📧 Enviar por email'}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => handleAction('send')}
+            disabled={actionLoading}
+            className="w-full rounded-lg bg-purple-600 py-2 text-sm font-medium text-white active:bg-purple-700 disabled:opacity-50"
+          >
+            {actionLoading ? '...' : '📧 Enviar por email'}
+          </button>
+          <button
+            onClick={handleWhatsApp}
+            disabled={actionLoading}
+            className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white active:bg-green-700 disabled:opacity-50"
+          >
+            {actionLoading ? '...' : '💬 Enviar por WhatsApp'}
+          </button>
+        </div>
       )}
       {estimate.status === 'sent' && (
         <div className="flex gap-2">
