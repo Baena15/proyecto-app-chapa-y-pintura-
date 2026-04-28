@@ -15,5 +15,5 @@ urlpatterns = [
     path("api/v1/", include("apps.notifications.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files in production too (for demo; use S3/Cloudinary in real production)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
