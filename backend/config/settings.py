@@ -32,6 +32,8 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "django_filters",
+    "cloudinary_storage",
+    "cloudinary",
 ]
 
 LOCAL_APPS = [
@@ -153,6 +155,21 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://baena15.github.io"
 ).split(",")
+
+# ─── Cloudinary (Media Storage) ─────────────
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", ""),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", ""),
+}
+if CLOUDINARY_STORAGE["CLOUD_NAME"]:
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+# ─── Twilio (WhatsApp / SMS) ────────────────
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")  # e.g. "whatsapp:+14155238886"
+TWILIO_SMS_FROM = os.getenv("TWILIO_SMS_FROM", "")
 
 # ─── Web Push (VAPID) ───────────────────────
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "BNrHGl4u4ashKqB7TcgQTdVdqVZvx9I_dylVonPAlZS2wfpy1AjrnXg4H6UyVQ5LPG4DmkGU2LI-exVeeylqNFo")

@@ -110,6 +110,7 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
 def create_estimate_from_work_order(request, pk):
     """Create an estimate linked to a work order."""
     from apps.estimates.models import Estimate
+    from apps.notifications.whatsapp import notify_estimate_ready
     work_order = get_object_or_404(WorkOrder, pk=pk)
     estimate, created = Estimate.objects.get_or_create(
         work_order=work_order,
@@ -117,6 +118,8 @@ def create_estimate_from_work_order(request, pk):
     )
     if not created:
         return Response({"detail": "Ya existe un presupuesto para esta OT"}, status=status.HTTP_400_BAD_REQUEST)
+    # Send WhatsApp notification
+    notify_estimate_ready(estimate)
     return Response({"id": estimate.id, "status": "created"})
 
 
@@ -125,6 +128,7 @@ def create_estimate_from_work_order(request, pk):
 def create_invoice_from_work_order(request, pk):
     """Create an invoice linked to a work order."""
     from apps.invoices.models import Invoice
+    from apps.notifications.whatsapp import notify_invoice_ready
     work_order = get_object_or_404(WorkOrder, pk=pk)
     invoice, created = Invoice.objects.get_or_create(
         work_order=work_order,
@@ -136,6 +140,8 @@ def create_invoice_from_work_order(request, pk):
     )
     if not created:
         return Response({"detail": "Ya existe una factura para esta OT"}, status=status.HTTP_400_BAD_REQUEST)
+    # Send WhatsApp notification
+    notify_invoice_ready(invoice)
     return Response({"id": invoice.id, "status": "created"})
 
 
@@ -226,7 +232,7 @@ def change_status(request, pk):
         notes=notes,
     )
 
-    # Send push notification and email when car is ready
+    # Send push notification, email and WhatsApp when car is ready
     if to_status == "ready":
         _send_push_to_customer(
             work_order,
@@ -235,6 +241,11 @@ def change_status(request, pk):
         )
         from apps.notifications.utils import notify_work_order_ready
         notify_work_order_ready(work_order)
+
+    # Send WhatsApp for other status changes
+    if to_status != from_status:
+        from apps.notifications.whatsapp import notify_workorder_status_update
+        notify_workorder_status_update(work_order, from_status, to_status)
 
     return Response({"status": to_status, "previous": from_status})
 
