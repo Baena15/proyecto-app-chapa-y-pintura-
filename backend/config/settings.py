@@ -157,13 +157,21 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 
 # ─── Cloudinary (Media Storage) ─────────────
-CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", ""),
-    "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
-    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", ""),
-}
-if CLOUDINARY_STORAGE["CLOUD_NAME"]:
+# Option A: CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
+# Option B: Separate vars CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
+if CLOUDINARY_URL:
+    import cloudinary
+    cloudinary.config(cloudinary_url=CLOUDINARY_URL)
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+else:
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", ""),
+        "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
+        "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", ""),
+    }
+    if CLOUDINARY_STORAGE["CLOUD_NAME"]:
+        DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 # ─── Twilio (WhatsApp / SMS) ────────────────
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
