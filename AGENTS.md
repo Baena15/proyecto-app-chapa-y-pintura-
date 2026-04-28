@@ -23,6 +23,7 @@
 - Notificaciones a clientes (email/SMS/push)
 - Panel de administracion Django
 - Portal cliente para seguimiento de reparaciones
+- Citas / agenda de entradas y entregas
 
 ---
 
@@ -32,15 +33,15 @@
 |-------|------------|-------------------|
 | **Backend** | Django + Django REST Framework | Django >=4.2,<5.0, DRF >=3.14,<4.0 |
 | **Database** | PostgreSQL 16 (prod) / SQLite (dev) | via `dj-database-url` |
-| **Cache** | Redis 7 | `django-redis`, puerto 6380 en dev |
-| **Auth** | JWT (djangorestframework-simplejwt) | Access 60min, Refresh 24h, con rotacion |
+| **Cache** | Redis 7 | `django-redis`, puerto 6380 en dev (fallback a DummyCache si no hay REDIS_URL) |
+| **Auth** | JWT (djangorestframework-simplejwt) | Access 60min, Refresh 24h, con rotacion y blacklist |
 | **Frontend** | React + Vite + Tailwind CSS | React 18.2+, Vite 5.0+, Tailwind 3.4+ |
-| **PWA** | Vite PWA Plugin | Service worker, manifest, offline support |
-| **Testing Backend** | pytest + pytest-django + pytest-cov + factory-boy | |
-| **Testing Frontend** | Vitest | v1.1+ |
+| **PWA** | Vite PWA Plugin | Service worker (`src/sw.js`), manifest, offline support, injectManifest strategy |
+| **Testing Backend** | pytest + pytest-django + pytest-cov + factory-boy | Configurado pero **sin archivos de test actualmente** |
+| **Testing Frontend** | Vitest | v1.1+ — Configurado pero **sin archivos de test actualmente** |
 | **Code Quality** | black, flake8, isort (Python); eslint, prettier (JS) | |
-| **DevOps** | Docker Compose, GitHub Actions | |
-| **Runtime** | Python 3.12+, Node.js 20+ | |
+| **DevOps** | Docker Compose, GitHub Actions, GitHub Pages, Railway | |
+| **Runtime** | Python 3.9+ (Dockerfile/runtime.txt usa 3.9; CI usa 3.12) | Node.js 20+ |
 
 ---
 
@@ -50,22 +51,23 @@
 app-taller-chapa/
 ├── backend/
 │   ├── config/               # Django settings, root urls, wsgi
-│   │   ├── settings.py       # Config completa: DB, JWT, CORS, REST_FRAMEWORK
+│   │   ├── settings.py       # Config completa: DB, JWT, CORS, REST_FRAMEWORK, VAPID, email, logging
 │   │   ├── urls.py           # Rutas API v1 + admin + media (debug)
 │   │   └── wsgi.py
 │   ├── apps/                 # Aplicaciones Django (modulares)
 │   │   ├── core/             # Comandos utilidad (seed.py)
 │   │   ├── users/            # Auth JWT, modelo User custom con roles
 │   │   ├── customers/        # Clientes y Vehiculos
-│   │   ├── workorders/       # Ordenes de trabajo, items, historial de estados
+│   │   ├── workorders/       # Ordenes de trabajo, items, historial de estados, comentarios, encuestas, citas
 │   │   ├── estimates/        # Presupuestos y lineas
 │   │   ├── invoices/         # Facturas y lineas (IVA auto-calculado)
 │   │   ├── photos/           # Fotos vinculadas a OTs
-│   │   └── notifications/    # Notificaciones multicanal
+│   │   └── notifications/    # Notificaciones multicanal + suscripciones push
 │   ├── media/                # Uploads de usuarios (avatars, fotos)
 │   ├── requirements.txt      # Dependencias Python con rangos exactos
 │   ├── pytest.ini            # Config pytest
 │   ├── .flake8               # Config flake8 (max 100 chars)
+│   ├── Procfile              # Comando para despliegue (gunicorn)
 │   ├── manage.py
 │   └── venv/                 # Virtual environment (no commitear)
 │
@@ -77,31 +79,43 @@ app-taller-chapa/
 │   │   │   ├── Layout.jsx    # Layout con navegacion movil inferior
 │   │   │   └── StatusBadge.jsx
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx  # Contexto auth: login/logout/user/isAdmin
-│   │   ├── hooks/            # Custom hooks (vacios por ahora)
+│   │   │   └── AuthContext.jsx  # Contexto auth: login/logout/user/isAdmin/isClient/isStaff
+│   │   ├── hooks/
+│   │   │   └── usePushNotifications.js  # Hook para suscripcion Web Push
 │   │   ├── pages/
+│   │   │   ├── AppointmentList.jsx
+│   │   │   ├── CustomerDetail.jsx
+│   │   │   ├── CustomerList.jsx
 │   │   │   ├── Dashboard.jsx
+│   │   │   ├── EstimateDetail.jsx
+│   │   │   ├── EstimateList.jsx
+│   │   │   ├── EstimatePrint.jsx
+│   │   │   ├── InvoiceDetail.jsx
+│   │   │   ├── InvoiceList.jsx
+│   │   │   ├── InvoicePrint.jsx
 │   │   │   ├── Login.jsx
+│   │   │   ├── NewWorkOrder.jsx
 │   │   │   ├── Profile.jsx
-│   │   │   ├── WorkOrderList.jsx
-│   │   │   └── WorkOrderDetail.jsx
+│   │   │   ├── WorkOrderDetail.jsx
+│   │   │   └── WorkOrderList.jsx
 │   │   ├── App.jsx           # React Router + rutas protegidas
 │   │   ├── main.jsx          # Entry point
-│   │   └── index.css         # Tailwind directives + custom styles
+│   │   ├── index.css         # Tailwind directives + custom styles
+│   │   └── sw.js             # Service worker personalizado para PWA
 │   ├── public/               # Iconos PWA, favicon, etc.
 │   ├── package.json
 │   ├── package-lock.json
-│   ├── vite.config.js        # Proxy /api y /media a :8000, PWA manifest
+│   ├── vite.config.js        # Proxy /api y /media a :8000, PWA manifest, base path para GitHub Pages
 │   ├── tailwind.config.js    # Paleta custom `primary` (50-900)
 │   ├── postcss.config.js
-│   └── eslint.config.js      # Flat config: react-hooks, react-refresh
+│   └── eslint.config.js      # Flat config: react-hooks, react-refresh, globals PWA
 │
 ├── scripts/
-│   ├── seed.ps1              # Wrapper PowerShell para `python manage.py seed`
+│   ├── seed.ps1              # Wrapper PowerShell (template; el seed real es `python manage.py seed`)
 │   └── test-api.ps1          # Smoke tests de endpoints (admin login, JWT token)
 │
 ├── docs/
-│   ├── CONVENTIONS.md        # Convenciones de codigo (heredadas de plantilla)
+│   ├── CONVENTIONS.md        # Convenciones de codigo (heredadas de plantilla madre)
 │   └── spec/                 # Especificacion funcional completa
 │       ├── 01-domains.md     # Dominios y maquina de estados de OT
 │       ├── 02-data-model.md  # Modelos Django detallados
@@ -112,17 +126,20 @@ app-taller-chapa/
 │
 ├── .claude/skills/           # Skills SDD (sdd-init, sdd-explore, etc.)
 ├── .github/
-│   ├── workflows/ci.yml      # CI/CD: backend (pytest+flake8+black) + frontend (lint+test+build) + deploy
+│   ├── workflows/ci.yml      # CI/CD: backend (pytest+flake8+black) + frontend (lint+test+build) + deploy GitHub Pages
 │   ├── ISSUE_TEMPLATE/       # bug_report.yml, feature_request.yml
 │   └── pull_request_template.md
-├── .cursorrules              # Reglas Cursor IDE (heredadas, parcialmente desfasadas)
+├── .cursorrules              # Reglas Cursor IDE (heredadas de plantilla, parcialmente desfasadas)
 ├── .env.example              # Plantilla completa de variables de entorno
 ├── .gitignore
 ├── AGENTS.md                 # Este archivo
 ├── README.md                 # Guia rapida de inicio (Espanol)
 ├── SECURITY.md               # Checklist pre-deploy de seguridad
 ├── Makefile                  # Comandos de desarrollo (orientado a Windows/PowerShell)
-└── docker-compose.yml        # PostgreSQL 16 (5433) + Redis 7 (6380)
+├── docker-compose.yml        # PostgreSQL 16 (5433) + Redis 7 (6380)
+├── Dockerfile                # Imagen de produccion (Python 3.9-slim + gunicorn)
+├── railway.json              # Configuracion para despliegue en Railway
+└── runtime.txt               # python-3.9.23 (para plataformas como Heroku)
 ```
 
 ---
@@ -239,6 +256,8 @@ make backend-test       # pytest con cobertura (`--cov=apps --cov-report=term-mi
 make frontend-test      # Vitest
 ```
 
+> **Nota importante**: Actualmente no hay archivos de test en `backend/apps/` ni en `frontend/src/`. El proyecto esta configurado para testing pero la suite esta vacia.
+
 Backend test config (`backend/pytest.ini`):
 - `DJANGO_SETTINGS_MODULE = config.settings`
 - Archivos de test: `tests.py`, `test_*.py`, `*_tests.py`
@@ -257,7 +276,7 @@ make clean              # Elimina dist, node_modules, __pycache__, caches
 make db-up              # Levanta PostgreSQL (5433) + Redis (6380) via Docker Compose
 make db-down            # Detiene contenedores
 make db-migrate         # Django migrate
-make db-seed            # Puebla datos de demo (3 usuarios, 3 clientes, 4 vehiculos, 5 OTs, etc.)
+make db-seed            # Puebla datos de demo (4 usuarios, 3 clientes, 4 vehiculos, 5 OTs, etc.)
 make db-reset           # Reset completo de BD (elimina volumenes Docker)
 make backend-shell      # Django shell
 ```
@@ -331,17 +350,18 @@ Todas las variables se cargan desde `.env` en la raiz (via `python-dotenv` en ba
 - **Cobertura**: `pytest-cov`, target minimo implicito via CI (`--cov=apps --cov-report=xml`).
 - **Factories**: `factory-boy` disponible para generar datos de test.
 - **Ubicacion**: tests dentro de cada app (`tests.py`, `test_*.py`, `*_tests.py`).
+- **Estado actual**: No hay archivos de test en ninguna app del backend.
 - **CI**: corre sobre PostgreSQL 16 (puerto 5433) con usuario `test/test` y base de datos `testdb`.
 
 ### Frontend
 
 - **Framework**: `Vitest`.
 - **Comando**: `npm run test` (o `make frontend-test`).
-- **Estado actual**: no hay archivos de test en `frontend/src/` todavia.
+- **Estado actual**: No hay archivos de test en `frontend/src/` todavia.
 
 ### Scripts de utilidad
 
-- `scripts/test-api.ps1`: Smoke tests en PowerShell que verifican `/admin/login/` y `/api/v1/auth/token/`.
+- `scripts/test-api.ps1`: Smoke tests en PowerShell que verifican `/admin/login/` y `/api/v1/auth/token/`. Nota: usa `admin`/`admin` por defecto, pero el seed crea `admin`/`admin123`.
 
 ---
 
@@ -365,9 +385,16 @@ Archivo: `.github/workflows/ci.yml`
    - Node 20, cache de npm via `package-lock.json`.
    - `npm ci`, `npm run lint`, `npm run test -- --run`, `npm run build`.
 
-3. **deploy** (Ubuntu, solo rama `main`):
+3. **build-pages** (Ubuntu, solo rama `main`):
    - Depende de `backend` y `frontend`.
-   - Paso placeholder; requiere secreto `DEPLOY_TOKEN`.
+   - Build del frontend para GitHub Pages.
+   - Sube artefacto a GitHub Pages.
+
+4. **deploy-pages** (Ubuntu, solo rama `main`):
+   - Despliega el artefacto a GitHub Pages.
+   - El `base` en `vite.config.js` esta configurado para `/proyecto-app-chapa-y-pintura-/`.
+
+**Despliegue backend**: Configurado para Railway (`railway.json` + `Dockerfile` + `Procfile`).
 
 ---
 
@@ -390,6 +417,8 @@ Principales puntos a considerar antes de desplegar:
 - **Backups**: configurar backups automaticos de PostgreSQL.
 - **PII**: logs no deben exponer datos personales.
 
+**Issue conocido**: Las claves VAPID para Web Push estan hardcodeadas en `backend/config/settings.py`. En produccion deben moverse a variables de entorno.
+
 Si se expone un secret:
 1. Rotar inmediatamente.
 2. Revocar tokens antiguos.
@@ -407,22 +436,29 @@ Si se expone un secret:
 | `core` | Comandos de management utilidad | - |
 | `users` | Autenticacion JWT, roles, perfiles | `User` (AbstractUser custom) |
 | `customers` | Clientes y vehiculos | `Customer`, `Vehicle` |
-| `workorders` | Ordenes de trabajo (dominio central) | `WorkOrder`, `WorkOrderItem`, `WorkOrderStatusHistory` |
+| `workorders` | Ordenes de trabajo (dominio central) | `WorkOrder`, `WorkOrderItem`, `WorkOrderStatusHistory`, `WorkOrderComment`, `WorkOrderSurvey`, `Appointment` |
 | `estimates` | Presupuestos | `Estimate`, `EstimateItem` |
 | `invoices` | Facturacion | `Invoice`, `InvoiceItem` |
 | `photos` | Fotos vinculadas a OTs | `Photo` |
-| `notifications` | Notificaciones multicanal | `Notification` |
+| `notifications` | Notificaciones multicanal + Web Push | `Notification`, `PushSubscription` |
 
 ### Convenciones de backend
 
 - Cada app sigue la estructura estandar Django: `models.py`, `views.py`, `serializers.py`, `urls.py`, `admin.py`, `apps.py`, `migrations/`.
 - Rutas API: todas bajo `/api/v1/`, definidas en `config/urls.py`.
-- Auth: endpoints JWT en `/api/v1/auth/` (provistos por `apps.users.urls`).
+- Auth: endpoints JWT en `/api/v1/auth/` (provistos por `apps.users.urls`):
+  - `POST /auth/token/` — login (devuelve access, refresh y user)
+  - `POST /auth/token/refresh/` — refresh token
+  - `POST /auth/token/verify/` — verify token
+  - `GET|PATCH /auth/me/` — perfil del usuario logueado
+  - `GET|POST /auth/users/` — listar/crear usuarios (admin)
+  - `GET|PATCH|DELETE /auth/users/<id>/` — detalle de usuario
 - Auto-generacion de codigos:
   - OT: `OT-{YYYY}-{NNNN}` (ej. `OT-2024-0001`)
   - Factura: `FAC-{YYYY}-{NNNN}`
 - Maquina de estados de WorkOrder: transiciones validadas en `workorders/views.py` (`change_status`).
-- Demo data: comando `python manage.py seed` crea 3 usuarios, 3 clientes, 4 vehiculos, 5 OTs con historial, 7 items, 2 presupuestos y 1 factura pagada.
+- Filtrado por rol: clientes solo ven sus propias OTs; mecanicos/pintores solo las asignadas a ellos.
+- Demo data: comando `python manage.py seed` crea 4 usuarios, 3 clientes, 4 vehiculos, 5 OTs con historial, 7 items, 4 comentarios, 2 presupuestos, 1 factura pagada, 1 encuesta y 3 citas.
 
 ---
 
@@ -436,6 +472,16 @@ Si se expone un secret:
 | `/` | `Dashboard` | Si | Resumen con stats y OTs recientes |
 | `/work-orders` | `WorkOrderList` | Si | Listado de ordenes de trabajo |
 | `/work-orders/:id` | `WorkOrderDetail` | Si | Detalle de una OT |
+| `/work-orders/new` | `NewWorkOrder` | Si | Crear nueva orden de trabajo |
+| `/appointments` | `AppointmentList` | Si | Listado de citas |
+| `/customers` | `CustomerList` | Si | Listado de clientes |
+| `/customers/:id` | `CustomerDetail` | Si | Detalle de cliente |
+| `/estimates` | `EstimateList` | Si | Listado de presupuestos |
+| `/estimates/:id` | `EstimateDetail` | Si | Detalle de presupuesto |
+| `/estimates/:id/print` | `EstimatePrint` | Si | Vista de impresion de presupuesto |
+| `/invoices` | `InvoiceList` | Si | Listado de facturas |
+| `/invoices/:id` | `InvoiceDetail` | Si | Detalle de factura |
+| `/invoices/:id/print` | `InvoicePrint` | Si | Vista de impresion de factura |
 | `/profile` | `Profile` | Si | Perfil de usuario |
 | `*` | redirect `/` | - | Catch-all |
 
@@ -444,14 +490,22 @@ Si se expone un secret:
 - Fetch wrapper con:
   - Automatic JWT `Authorization: Bearer <token>` header.
   - Persistencia de tokens en `localStorage`.
-  - Refresh automatico del access token cuando expira.
-  - Base URL tomada del entorno (via proxy en dev).
+  - Refresh automatico del access token cuando expira (401).
+  - Soporte para multipart/form-data (uploads).
+  - Base URL tomada de `VITE_API_URL` o fallback a `/api/v1`.
 
 ### AuthContext (`frontend/src/context/AuthContext.jsx`)
 
-- Provee: `user`, `login(credentials)`, `logout()`, `isAdmin`.
+- Provee: `user`, `login(credentials)`, `logout()`, `isAdmin`, `isClient`, `isStaff`.
 - Persistencia: token en `localStorage`, user en memoria.
 - Integracion: `PrivateRoute` wrapper que redirige a `/login` si no hay sesion.
+
+### Web Push (`frontend/src/hooks/usePushNotifications.js`)
+
+- Hook para gestionar suscripciones push en el navegador.
+- Requiere service worker activo.
+- Obtiene la clave publica VAPID desde `/api/v1/vapid-public-key/`.
+- Endpoints: `POST /api/v1/push-subscribe/` y `POST /api/v1/push-test/`.
 
 ---
 
@@ -464,6 +518,7 @@ Tras ejecutar `make db-seed` (o `python manage.py seed`):
 | `admin` | `admin123` | Administrador |
 | `mecanico1` | `pass123` | Mecanico / Chapista |
 | `recepcion` | `pass123` | Recepcionista |
+| `cliente1` | `pass123` | Cliente (vinculado a Ana Martinez) |
 
 Admin Django: `http://127.0.0.1:8000/admin/`
 
