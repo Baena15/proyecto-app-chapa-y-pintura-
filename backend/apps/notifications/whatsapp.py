@@ -10,6 +10,17 @@ def get_twilio_client():
     return Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
 
+def _normalize_phone(phone: str) -> str:
+    """Normalize phone to E.164 format. Assumes Spain (+34) if no country code."""
+    cleaned = phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if cleaned.startswith("+"):
+        return cleaned
+    # Spanish mobile: starts with 6, 7, or 9
+    if cleaned.startswith("6") or cleaned.startswith("7") or cleaned.startswith("9"):
+        return f"+34{cleaned}"
+    return f"+{cleaned}"
+
+
 def send_whatsapp_message(to_number: str, body: str) -> dict:
     """Send a WhatsApp message via Twilio.
 
@@ -27,8 +38,9 @@ def send_whatsapp_message(to_number: str, body: str) -> dict:
     if not settings.TWILIO_WHATSAPP_FROM:
         return {"success": False, "error": "TWILIO_WHATSAPP_FROM not configured"}
 
-    # Ensure to_number has whatsapp: prefix
-    to = to_number if to_number.startswith("whatsapp:") else f"whatsapp:{to_number}"
+    # Normalize and ensure whatsapp: prefix
+    normalized = _normalize_phone(to_number)
+    to = f"whatsapp:{normalized}"
     from_ = (
         settings.TWILIO_WHATSAPP_FROM
         if settings.TWILIO_WHATSAPP_FROM.startswith("whatsapp:")
